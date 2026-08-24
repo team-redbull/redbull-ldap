@@ -1,0 +1,10 @@
+# Values for linting and rendering only -- the chart requires the connection
+# details, so `helm lint` needs something to chew on. Not for a real install.
+config:
+  ldapServer: ldaps://dc.example.internal
+  ldapDomain: EXAMPLE
+  adApiUrl: https://ad-api.example.internal/users/user/isUserMemberOfSecurityGroup
+secret:
+  adApiClientId: lint-placeholder
+image:
+  repository: registry.example.internal/redbull/redbull-ldap

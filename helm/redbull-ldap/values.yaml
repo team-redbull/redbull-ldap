@@ -1,0 +1,131 @@
+# Default values for redbull-ldap.
+# Everything under `config` and `secret` is required by the app: it validates
+# its settings at startup and refuses to serve without them, so a release with
+# a missing value crash-loops instead of silently pointing somewhere unexpected.
+
+replicaCount: 2
+
+image:
+  # Full pull spec without the tag. On OpenShift this is usually either an
+  # external registry or the internal one, e.g.
+  #   image-registry.openshift-image-registry.svc:5000/<namespace>/redbull-ldap
+  repository: redbull-ldap
+  # Defaults to .Chart.AppVersion when empty. Prefer a digest or an immutable
+  # tag over "latest".
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  # Left to the chart's fullname when empty.
+  name: ""
+  annotations: {}
+
+# --- application settings -------------------------------------------------
+# Non-secret settings. Rendered into a ConfigMap and injected with envFrom,
+# so the keys are the environment variable names the app reads.
+config:
+  # Prefer ldaps:// -- a plain ldap:// simple bind puts the password on the
+  # wire in cleartext.
+  ldapServer: ""            # LDAP_SERVER, e.g. ldaps://dc.example.internal
+  ldapDomain: ""            # LDAP_DOMAIN, e.g. YOURDOMAIN
+  adApiUrl: ""              # AD_API_URL
+
+  # Optional, shown with the app's own defaults. Leave empty to use them.
+  ldapConnectTimeout: ""    # LDAP_CONNECT_TIMEOUT, default 5
+  ldapReceiveTimeout: ""    # LDAP_RECEIVE_TIMEOUT, default 10
+  adApiTimeout: ""          # AD_API_TIMEOUT, default 10.0
+  adApiRetries: ""          # AD_API_RETRIES, default 2
+  # Only ever set this to "false" against a local test rig.
+  adApiVerifySsl: ""        # AD_API_VERIFY_SSL, default true
+
+# Extra environment variables, if you need something the keys above don't cover.
+extraEnv: []
+#  - name: LOG_LEVEL
+#    value: info
+
+secret:
+  # Point at a Secret you manage out-of-band (sealed-secrets, vault, `oc create
+  # secret generic`). It must contain the key named below.
+  existingSecret: ""
+  key: AD_API_CLIENT_ID
+  # Only used when existingSecret is empty. Do NOT commit a real client id
+  # here -- pass it with `--set secret.adApiClientId=...` or a private values
+  # file, or use existingSecret.
+  adApiClientId: ""
+
+# --- networking -----------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 8000
+  # The port the container listens on; also what the probes hit.
+  targetPort: 8000
+
+# WARNING: /auth is a password-guessing oracle and this API has no
+# authentication of its own. A Route makes it reachable from outside the
+# cluster -- keep it behind rate limiting, and set route.enabled=false if
+# in-cluster callers are the only ones that need it.
+route:
+  enabled: true
+  # Empty lets the OpenShift router generate <name>-<namespace>.<apps domain>.
+  host: ""
+  path: ""
+  annotations: {}
+    # Router rate limiting, strongly recommended for this service:
+    # haproxy.router.openshift.io/rate-limit-connections: "true"
+    # haproxy.router.openshift.io/rate-limit-connections.rate-http: "10"
+  # The pod speaks plain HTTP, so the router terminates TLS (edge) and the
+  # remaining hop stays inside the cluster network.
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+
+# --- pod ------------------------------------------------------------------
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Deliberately no runAsUser/fsGroup: OpenShift's SCC assigns a UID from the
+# namespace's range, and hardcoding one breaks the install in other projects.
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Both probes hit /health, which never touches LDAP or the AD API -- an
+# upstream outage must not get these pods killed or pulled out of the service.
+livenessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 20
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

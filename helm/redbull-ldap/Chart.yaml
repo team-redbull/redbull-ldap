@@ -1,0 +1,13 @@
+apiVersion: v2
+name: redbull-ldap
+description: RedBull LDAP Checker - an internal authentication decision endpoint, packaged for OpenShift.
+type: application
+# Chart version: bump on every chart change.
+version: 0.1.0
+# The version of the application this chart deploys by default.
+appVersion: "1.0.0"
+keywords:
+  - ldap
+  - authentication
+  - openshift
+home: https://github.com/redbull/redbull-ldap

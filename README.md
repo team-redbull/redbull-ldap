@@ -28,6 +28,18 @@ cp .env.example .env      # then fill it in
 
 Interactive docs at `/docs`, liveness at `/health`.
 
+## Deploying to OpenShift
+
+```bash
+helm upgrade --install redbull-ldap ./helm/redbull-ldap --namespace redbull-ldap \
+  --set image.repository=<registry>/<namespace>/redbull-ldap ...
+```
+
+The chart lives in [helm/redbull-ldap](helm/redbull-ldap) and exposes the API
+through a `Route`; [helm/README.md](helm/README.md) has the full settings list
+and what the defaults assume. The image is built from the
+[Dockerfile](Dockerfile) at the repo root.
+
 ## The contract
 
 ```

@@ -1,0 +1,33 @@
+{{/*
+The keys are the environment variable names the app reads (pydantic-settings
+uppercases its field names), so this maps 1:1 onto .env.example.
+The optional ones are only rendered when set, leaving the app's own defaults
+in charge otherwise.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "redbull-ldap.fullname" . }}
+  labels:
+    {{- include "redbull-ldap.labels" . | nindent 4 }}
+data:
+  LDAP_SERVER: {{ required "config.ldapServer is required (e.g. ldaps://dc.example.internal)" .Values.config.ldapServer | quote }}
+  LDAP_DOMAIN: {{ required "config.ldapDomain is required" .Values.config.ldapDomain | quote }}
+  AD_API_URL: {{ required "config.adApiUrl is required" .Values.config.adApiUrl | quote }}
+  {{/* Compared as a string on purpose: `with`/`if` would read a deliberate
+       false or 0 as "unset" and silently leave the app's default in place. */}}
+  {{- if ne (toString .Values.config.ldapConnectTimeout) "" }}
+  LDAP_CONNECT_TIMEOUT: {{ .Values.config.ldapConnectTimeout | toString | quote }}
+  {{- end }}
+  {{- if ne (toString .Values.config.ldapReceiveTimeout) "" }}
+  LDAP_RECEIVE_TIMEOUT: {{ .Values.config.ldapReceiveTimeout | toString | quote }}
+  {{- end }}
+  {{- if ne (toString .Values.config.adApiTimeout) "" }}
+  AD_API_TIMEOUT: {{ .Values.config.adApiTimeout | toString | quote }}
+  {{- end }}
+  {{- if ne (toString .Values.config.adApiRetries) "" }}
+  AD_API_RETRIES: {{ .Values.config.adApiRetries | toString | quote }}
+  {{- end }}
+  {{- if ne (toString .Values.config.adApiVerifySsl) "" }}
+  AD_API_VERIFY_SSL: {{ .Values.config.adApiVerifySsl | toString | quote }}
+  {{- end }}

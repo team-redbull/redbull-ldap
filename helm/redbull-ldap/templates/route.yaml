@@ -1,0 +1,42 @@
+{{- if .Values.route.enabled }}
+{{/*
+OpenShift Route. The pod serves plain HTTP, so TLS is terminated at the
+router (edge) and the remaining hop stays on the cluster network.
+
+Remember what is behind this: /auth takes a username and password and tells
+the caller whether they are valid. Exposing it outside the cluster without
+rate limiting hands out a password-guessing oracle -- see the annotations in
+values.yaml.
+*/}}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "redbull-ldap.fullname" . }}
+  labels:
+    {{- include "redbull-ldap.labels" . | nindent 4 }}
+  {{- with .Values.route.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.route.host }}
+  host: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.route.path }}
+  path: {{ . | quote }}
+  {{- end }}
+  to:
+    kind: Service
+    name: {{ include "redbull-ldap.fullname" . }}
+    weight: 100
+  port:
+    targetPort: http
+  {{- if .Values.route.tls.enabled }}
+  tls:
+    termination: {{ .Values.route.tls.termination }}
+    {{- with .Values.route.tls.insecureEdgeTerminationPolicy }}
+    insecureEdgeTerminationPolicy: {{ . }}
+    {{- end }}
+  {{- end }}
+  wildcardPolicy: {{ .Values.route.wildcardPolicy }}
+{{- end }}

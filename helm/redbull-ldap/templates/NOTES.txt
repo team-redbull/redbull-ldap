@@ -1,0 +1,31 @@
+{{ .Chart.Name }} {{ .Chart.AppVersion }} released as {{ .Release.Name }} in {{ .Release.Namespace }}.
+
+{{- if .Values.route.enabled }}
+
+The API is reachable at:
+
+  {{ if .Values.route.tls.enabled }}https{{ else }}http{{ end }}://{{ .Values.route.host | default (printf "<oc get route %s -n %s -o jsonpath='{.spec.host}'>" (include "redbull-ldap.fullname" .) .Release.Namespace) }}{{ .Values.route.path }}
+
+  WARNING: /auth answers whether a username and password are valid, and this
+  API has no authentication of its own. Anything that can reach the Route can
+  test credentials against your directory, and repeated wrong guesses lock out
+  real AD accounts. Put rate limiting on the Route (see route.annotations in
+  values.yaml), or set route.enabled=false if only in-cluster callers need it.
+{{- else }}
+
+No Route was created. In-cluster callers reach the API at:
+
+  http://{{ include "redbull-ldap.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}
+{{- end }}
+
+Check that it came up:
+
+  oc rollout status deployment/{{ include "redbull-ldap.fullname" . }} -n {{ .Release.Namespace }}
+  oc logs -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }}
+
+The pods validate their settings at startup, so a CrashLoopBackOff right after
+install usually means a missing or wrong value in the ConfigMap or Secret.
+{{- if eq (toString .Values.config.adApiVerifySsl) "false" }}
+
+NOTE: AD_API_VERIFY_SSL is off - TLS to the AD API is not being verified.
+{{- end }}

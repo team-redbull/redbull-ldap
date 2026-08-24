@@ -38,11 +38,6 @@ logger = logging.getLogger(__name__)
 async def lifespan(_: FastAPI):
     """Fail fast on a misconfigured deployment rather than on first request."""
     settings = get_settings()
-    if settings.ldap_server.startswith("ldap://"):
-        logger.warning(
-            "LDAP_SERVER uses ldap:// - credentials are sent in cleartext. "
-            "Use ldaps:// in any non-local environment."
-        )
     if not settings.ad_api_verify_ssl:
         logger.warning("AD_API_VERIFY_SSL is disabled - TLS is not being verified.")
     yield

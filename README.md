@@ -64,8 +64,9 @@ user out while LDAP is rebooting.
 
 ## Notes for operators
 
-- **Use `ldaps://`.** A plain `ldap://` simple bind puts the password on the
-  wire in cleartext. The service logs a warning at startup if you do.
+- **Prefer `ldaps://` where the directory supports it.** A plain `ldap://`
+  simple bind puts the password on the wire in cleartext, so if you must use
+  it, keep the hop to the domain controller on a trusted network.
 - **Terminate TLS in front of this service too**, for the same reason - it
   receives plaintext passwords in the request body.
 - **This API has no authentication of its own.** Anything that can reach it can
